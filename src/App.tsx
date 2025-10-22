@@ -3,10 +3,17 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
 import { ProfileDisplay } from './components/ProfileDisplay';
 import { ProfileEditor } from './components/ProfileEditor';
+import { LandingPage } from './components/LandingPage';
+import { PublicProfile } from './components/PublicProfile';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
+
+  const path = window.location.pathname;
+  const isPublicProfile = path.startsWith('/p/');
+  const slug = isPublicProfile ? path.replace('/p/', '') : null;
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -15,6 +22,10 @@ function AppContent() {
       });
     }
   }, []);
+
+  if (isPublicProfile && slug) {
+    return <PublicProfile slug={slug} />;
+  }
 
   if (loading) {
     return (
@@ -28,6 +39,9 @@ function AppContent() {
   }
 
   if (!user) {
+    if (showLanding) {
+      return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+    }
     return <Auth />;
   }
 

@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Save, Palette } from 'lucide-react';
-
-const gradientPresets = [
-  { name: 'Céu Divino', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { name: 'Pôr do Sol', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { name: 'Mar Celestial', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { name: 'Aurora', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { name: 'Primavera', value: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
-  { name: 'Dourado', value: 'linear-gradient(135deg, #f9d423 0%, #ff4e50 100%)' },
-];
+import { Save, Palette, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { ImageUpload } from './ImageUpload';
+import { GradientCustomizer } from './GradientCustomizer';
+import { Profile } from '../types/profile';
 
 interface ProfileEditorProps {
   onSave: () => void;
@@ -20,7 +14,10 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
   const [profile, setProfile] = useState<Partial<Profile>>({
+    slug: '',
     full_name: '',
     parish: '',
     pastoral: '',
@@ -35,7 +32,8 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
     primary_color: '#8B4513',
     secondary_color: '#D4AF37',
     background_type: 'gradient',
-    background_value: gradientPresets[0].value,
+    background_value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background_overlay_opacity: 0.3,
   });
 
   useEffect(() => {
@@ -53,12 +51,61 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
 
     if (data) {
       setProfile(data);
+      setSlugAvailable(true);
     }
+  };
+
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) {
+      setSlugAvailable(null);
+      return;
+    }
+
+    setCheckingSlug(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('slug')
+      .eq('slug', slug)
+      .neq('user_id', user?.id || '')
+      .maybeSingle();
+
+    setSlugAvailable(!data);
+    setCheckingSlug(false);
+  };
+
+  const handleSlugChange = (value: string) => {
+    const newSlug = generateSlug(value);
+    setProfile({ ...profile, slug: newSlug });
+
+    const timeoutId = setTimeout(() => {
+      checkSlugAvailability(newSlug);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (!profile.slug || profile.slug.length < 3) {
+      setMessage('O link personalizado deve ter pelo menos 3 caracteres');
+      return;
+    }
+
+    if (slugAvailable === false) {
+      setMessage('Este link já está em uso. Escolha outro.');
+      return;
+    }
 
     setLoading(true);
     setMessage('');
@@ -94,6 +141,8 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
     }
   };
 
+  const profileUrl = profile.slug ? `${window.location.origin}/p/${profile.slug}` : '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 p-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -103,6 +152,50 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <LinkIcon className="w-5 h-5 text-blue-700" />
+                <h3 className="text-lg font-semibold text-blue-900">Link Personalizado</h3>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={profile.slug || ''}
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  placeholder="seu-nome-unico"
+                  required
+                />
+
+                {profile.slug && profile.slug.length >= 3 && (
+                  <div className="flex items-center gap-2">
+                    {checkingSlug ? (
+                      <span className="text-sm text-gray-600">Verificando...</span>
+                    ) : slugAvailable === true ? (
+                      <span className="text-sm text-green-600 font-medium">✓ Link disponível!</span>
+                    ) : slugAvailable === false ? (
+                      <span className="text-sm text-red-600 font-medium">✗ Link já está em uso</span>
+                    ) : null}
+                  </div>
+                )}
+
+                {profileUrl && slugAvailable && (
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600 mb-1">Seu link público:</p>
+                    <a
+                      href={profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-700 font-medium break-all"
+                    >
+                      {profileUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -182,16 +275,31 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL da Imagem do Santo
-              </label>
-              <input
-                type="url"
-                value={profile.saint_image_url}
-                onChange={(e) => setProfile({ ...profile, saint_image_url: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                placeholder="https://exemplo.com/imagem-santo.jpg"
+            <div className="space-y-6 border-t pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ImageIcon className="w-5 h-5 text-amber-700" />
+                <h3 className="text-lg font-semibold text-gray-800">Imagens</h3>
+              </div>
+
+              <ImageUpload
+                label="Foto de Perfil"
+                currentImage={profile.profile_image_url}
+                onImageChange={(url) => setProfile({ ...profile, profile_image_url: url })}
+                folder="profiles/avatars"
+              />
+
+              <ImageUpload
+                label="Imagem de Capa"
+                currentImage={profile.cover_image_url}
+                onImageChange={(url) => setProfile({ ...profile, cover_image_url: url })}
+                folder="profiles/covers"
+              />
+
+              <ImageUpload
+                label="Imagem do Santo"
+                currentImage={profile.saint_image_url}
+                onImageChange={(url) => setProfile({ ...profile, saint_image_url: url })}
+                folder="profiles/saints"
               />
             </div>
 
@@ -221,39 +329,13 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL da Foto de Perfil
-              </label>
-              <input
-                type="url"
-                value={profile.profile_image_url}
-                onChange={(e) => setProfile({ ...profile, profile_image_url: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                placeholder="https://exemplo.com/foto-perfil.jpg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL da Imagem de Capa
-              </label>
-              <input
-                type="url"
-                value={profile.cover_image_url}
-                onChange={(e) => setProfile({ ...profile, cover_image_url: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                placeholder="https://exemplo.com/capa.jpg"
-              />
-            </div>
-
             <div className="border-t pt-6">
               <div className="flex items-center gap-2 mb-4">
                 <Palette className="w-5 h-5 text-amber-700" />
                 <h3 className="text-lg font-semibold text-gray-800">Personalização Visual</h3>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Cor Primária
@@ -279,33 +361,64 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
                 </div>
               </div>
 
-              <div className="mt-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Tema de Fundo (Gradiente)
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {gradientPresets.map((gradient) => (
-                    <button
-                      key={gradient.name}
-                      type="button"
-                      onClick={() => setProfile({
-                        ...profile,
-                        background_type: 'gradient',
-                        background_value: gradient.value
-                      })}
-                      className={`h-16 rounded-xl transition-all ${
-                        profile.background_value === gradient.value
-                          ? 'ring-4 ring-amber-500 scale-105'
-                          : 'hover:scale-105'
-                      }`}
-                      style={{ background: gradient.value }}
-                    >
-                      <span className="text-white text-xs font-semibold drop-shadow-lg">
-                        {gradient.name}
-                      </span>
-                    </button>
-                  ))}
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setProfile({ ...profile, background_type: 'gradient' })}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      profile.background_type === 'gradient' || profile.background_type === 'custom-gradient'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Gradiente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProfile({ ...profile, background_type: 'image' })}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      profile.background_type === 'image'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Imagem
+                  </button>
                 </div>
+
+                {(profile.background_type === 'gradient' || profile.background_type === 'custom-gradient') && (
+                  <GradientCustomizer
+                    value={profile.background_value || ''}
+                    onChange={(value) => setProfile({ ...profile, background_value: value })}
+                  />
+                )}
+
+                {profile.background_type === 'image' && (
+                  <div className="space-y-4">
+                    <ImageUpload
+                      label="Imagem de Fundo"
+                      currentImage={profile.background_value}
+                      onImageChange={(url) => setProfile({ ...profile, background_value: url })}
+                      folder="profiles/backgrounds"
+                    />
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Opacidade da Sombra: {Math.round((profile.background_overlay_opacity || 0.3) * 100)}%
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={profile.background_overlay_opacity || 0.3}
+                        onChange={(e) => setProfile({ ...profile, background_overlay_opacity: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -321,7 +434,7 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || slugAvailable === false}
               className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-4 rounded-xl font-semibold hover:from-amber-700 hover:to-orange-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Save className="w-5 h-5" />

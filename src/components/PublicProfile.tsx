@@ -1,33 +1,34 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { Cross, Church, Calendar, Sparkles, BookOpen, LogOut, Edit } from 'lucide-react';
+import { Cross, Church, Calendar, Sparkles, BookOpen, Home } from 'lucide-react';
 import { Profile } from '../types/profile';
 
-interface ProfileDisplayProps {
-  onEdit: () => void;
+interface PublicProfileProps {
+  slug: string;
 }
 
-export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
-  const { user, signOut } = useAuth();
+export function PublicProfile({ slug }: PublicProfileProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     loadProfile();
-  }, [user]);
+  }, [slug]);
 
   const loadProfile = async () => {
-    if (!user) return;
-
     setLoading(true);
-    const { data } = await supabase
+    setNotFound(false);
+
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('slug', slug)
       .maybeSingle();
 
-    if (data) {
+    if (error || !data) {
+      setNotFound(true);
+    } else {
       setProfile(data);
     }
     setLoading(false);
@@ -44,21 +45,22 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
     );
   }
 
-  if (!profile) {
+  if (notFound || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 p-4">
         <div className="text-center max-w-md">
-          <Cross className="w-20 h-20 text-amber-600 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Crie seu Perfil Católico</h2>
+          <Cross className="w-20 h-20 text-amber-600 mx-auto mb-6 opacity-50" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Perfil não encontrado</h2>
           <p className="text-gray-600 mb-8">
-            Preencha suas informações para criar sua carteirinha católica digital
+            Este perfil não existe ou foi removido.
           </p>
-          <button
-            onClick={onEdit}
-            className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-amber-700 hover:to-orange-700 transition shadow-lg"
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-amber-700 hover:to-orange-700 transition shadow-lg"
           >
-            Criar Perfil
-          </button>
+            <Home className="w-5 h-5" />
+            Voltar ao Início
+          </a>
         </div>
       </div>
     );
@@ -88,20 +90,13 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
       >
         <div className="max-w-2xl mx-auto px-4 py-8">
           <div className="flex justify-end gap-3 mb-6">
-            <button
-              onClick={onEdit}
+            <a
+              href="/"
               className="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold hover:bg-white transition shadow-lg flex items-center gap-2 text-gray-800"
             >
-              <Edit className="w-5 h-5" />
-              Editar
-            </button>
-            <button
-              onClick={signOut}
-              className="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold hover:bg-white transition shadow-lg flex items-center gap-2 text-gray-800"
-            >
-              <LogOut className="w-5 h-5" />
-              Sair
-            </button>
+              <Home className="w-5 h-5" />
+              Criar Minha Carteirinha
+            </a>
           </div>
 
           <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden">
@@ -139,7 +134,7 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                   className="text-3xl md:text-4xl font-bold mb-2"
                   style={{ color: profile.primary_color }}
                 >
-                  {profile.full_name || 'Seu Nome'}
+                  {profile.full_name || 'Católico'}
                 </h1>
                 <div className="flex items-center justify-center gap-2 text-gray-600">
                   <Cross className="w-4 h-4" />
@@ -269,9 +264,15 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
           </div>
 
           <div className="mt-8 text-center">
-            <p className="text-white text-sm font-medium drop-shadow-lg">
+            <p className="text-white text-sm font-medium drop-shadow-lg mb-4">
               Carteirinha Católica Digital
             </p>
+            <a
+              href="/"
+              className="inline-block text-white hover:text-amber-200 text-sm font-medium underline"
+            >
+              Crie a sua também
+            </a>
           </div>
         </div>
       </div>
