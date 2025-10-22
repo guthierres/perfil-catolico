@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Save, Palette, Link as LinkIcon, Image as ImageIcon, Plus, X, Music } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { GradientCustomizer } from './GradientCustomizer';
-import { Profile, MusicEmbed } from '../types/profile';
+import { Profile, MusicEmbed, CivilStatus, Sacrament } from '../types/profile';
 import { MusicEmbed as MusicEmbedComponent } from './MusicEmbed';
 
 interface ProfileEditorProps {
@@ -20,6 +20,7 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
   const [profile, setProfile] = useState<Partial<Profile>>({
     slug: '',
     full_name: '',
+    civil_status: null,
     parish: '',
     pastorals: [],
     baptism_date: null,
@@ -27,7 +28,9 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
     patron_saint: '',
     saint_image_url: '',
     inspiration_quote: '',
+    quote_author: '',
     bible_passage: '',
+    sacraments: [],
     profile_image_url: '',
     cover_image_url: '',
     primary_color: '#8B4513',
@@ -219,6 +222,38 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Estado Civil
+                </label>
+                <select
+                  value={profile.civil_status || ''}
+                  onChange={(e) => setProfile({ ...profile, civil_status: e.target.value as CivilStatus || null })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Selecione</option>
+                  <option value="solteiro">Solteiro(a)</option>
+                  <option value="casado">Casado(a)</option>
+                  <option value="namorando">Namorando</option>
+                  <option value="religioso">Religioso(a)</option>
+                  <option value="seminarista">Seminarista</option>
+                  <option value="diacono">Diácono</option>
+                  <option value="padre">Padre</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Data de Batismo
+                </label>
+                <input
+                  type="date"
+                  value={profile.baptism_date || ''}
+                  onChange={(e) => setProfile({ ...profile, baptism_date: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Paróquia
                 </label>
                 <input
@@ -293,18 +328,6 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Data de Batismo
-                </label>
-                <input
-                  type="date"
-                  value={profile.baptism_date || ''}
-                  onChange={(e) => setProfile({ ...profile, baptism_date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nome do Pároco
                 </label>
                 <input
@@ -369,6 +392,56 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                 placeholder="Sua frase inspiradora"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Autor da Frase
+              </label>
+              <input
+                type="text"
+                value={profile.quote_author}
+                onChange={(e) => setProfile({ ...profile, quote_author: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                placeholder="Nome do autor"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sacramentos Recebidos
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { value: 'batismo', label: 'Batismo' },
+                  { value: 'confissao', label: 'Confissão' },
+                  { value: 'eucaristia', label: 'Eucaristia' },
+                  { value: 'crisma', label: 'Crisma' },
+                  { value: 'matrimonio', label: 'Matrimônio' },
+                  { value: 'ordem', label: 'Ordem' },
+                  { value: 'uncao', label: 'Unção' },
+                ].map((sacrament) => (
+                  <label
+                    key={sacrament.value}
+                    className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={profile.sacraments?.includes(sacrament.value as Sacrament) || false}
+                      onChange={(e) => {
+                        const sacraments = profile.sacraments || [];
+                        if (e.target.checked) {
+                          setProfile({ ...profile, sacraments: [...sacraments, sacrament.value as Sacrament] });
+                        } else {
+                          setProfile({ ...profile, sacraments: sacraments.filter((s) => s !== sacrament.value) });
+                        }
+                      }}
+                      className="w-4 h-4 text-amber-600 rounded focus:ring-2 focus:ring-amber-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">{sacrament.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Cross, Church, Calendar, Sparkles, BookOpen, LogOut, Edit, Music } from 'lucide-react';
+import { Cross, Church, Calendar, Sparkles, BookOpen, LogOut, Edit, Music, Award } from 'lucide-react';
 import { Profile } from '../types/profile';
 import { MusicEmbed } from './MusicEmbed';
+import { getDisplayName, getCivilStatusLabel, getSacramentLabel } from '../lib/profileUtils';
 
 interface ProfileDisplayProps {
   onEdit: () => void;
@@ -140,15 +141,37 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                   className="text-3xl md:text-4xl font-bold mb-2"
                   style={{ color: profile.primary_color }}
                 >
-                  {profile.full_name || 'Seu Nome'}
+                  {getDisplayName(profile.full_name, profile.civil_status)}
                 </h1>
-                <div className="flex items-center justify-center gap-2 text-gray-600">
-                  <Cross className="w-4 h-4" />
-                  <span className="font-medium">Católico</span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Cross className="w-4 h-4" />
+                    <span className="font-medium">Católico</span>
+                  </div>
+                  {profile.civil_status && (
+                    <span className="text-sm text-gray-500">
+                      {getCivilStatusLabel(profile.civil_status)}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-4 mb-8">
+                {profile.baptism_date && (
+                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                    <Calendar
+                      className="w-6 h-6 mt-0.5 flex-shrink-0"
+                      style={{ color: profile.primary_color }}
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-600">Data de Batismo</p>
+                      <p className="text-gray-800 font-medium">
+                        {new Date(profile.baptism_date).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {profile.parish && (
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
                     <Church
@@ -190,21 +213,6 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                   </div>
                 )}
 
-                {profile.baptism_date && (
-                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <Calendar
-                      className="w-6 h-6 mt-0.5 flex-shrink-0"
-                      style={{ color: profile.primary_color }}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-600">Data de Batismo</p>
-                      <p className="text-gray-800 font-medium">
-                        {new Date(profile.baptism_date).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 {profile.priest_name && (
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
                     <Cross
@@ -214,6 +222,34 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                     <div>
                       <p className="text-sm font-semibold text-gray-600">Pároco</p>
                       <p className="text-gray-800 font-medium">{profile.priest_name}</p>
+                    </div>
+                  </div>
+                )}
+
+                {profile.sacraments && profile.sacraments.length > 0 && (
+                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                    <Award
+                      className="w-6 h-6 mt-0.5 flex-shrink-0"
+                      style={{ color: profile.secondary_color }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-600 mb-2">
+                        Sacramentos Recebidos ({profile.sacraments.length})
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.sacraments.map((sacrament, index) => (
+                          <span
+                            key={index}
+                            className="inline-block px-3 py-1 rounded-lg text-sm font-medium text-gray-800"
+                            style={{
+                              backgroundColor: `${profile.secondary_color}20`,
+                              borderLeft: `3px solid ${profile.secondary_color}`
+                            }}
+                          >
+                            {getSacramentLabel(sacrament)}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -258,9 +294,14 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                     borderLeft: `4px solid ${profile.secondary_color}`
                   }}
                 >
-                  <p className="text-lg italic text-gray-700 leading-relaxed">
+                  <p className="text-lg italic text-gray-700 leading-relaxed mb-2">
                     "{profile.inspiration_quote}"
                   </p>
+                  {profile.quote_author && (
+                    <p className="text-xs italic text-gray-500 text-right">
+                      — {profile.quote_author}
+                    </p>
+                  )}
                 </div>
               )}
 

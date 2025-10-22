@@ -4,11 +4,16 @@ export interface MusicEmbed {
   title: string;
 }
 
+export type CivilStatus = 'solteiro' | 'casado' | 'namorando' | 'religioso' | 'seminarista' | 'diacono' | 'padre';
+
+export type Sacrament = 'batismo' | 'confissao' | 'eucaristia' | 'crisma' | 'matrimonio' | 'ordem' | 'uncao';
+
 export interface Profile {
   id: string;
   user_id: string;
   slug: string | null;
   full_name: string;
+  civil_status: CivilStatus | null;
   parish: string;
   pastorals: string[];
   baptism_date: string | null;
@@ -16,7 +21,9 @@ export interface Profile {
   patron_saint: string;
   saint_image_url: string;
   inspiration_quote: string;
+  quote_author: string;
   bible_passage: string;
+  sacraments: Sacrament[];
   profile_image_url: string;
   cover_image_url: string;
   primary_color: string;
