@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { Cross, Church, Calendar, Sparkles, BookOpen, Home, Music, Award } from 'lucide-react';
 import { Profile } from '../types/profile';
 import { MusicEmbed } from './MusicEmbed';
+import { WalletCard } from './WalletCard';
+import { ProfileTabs } from './ProfileTabs';
 import { getDisplayName, getCivilStatusLabel, getSacramentLabel } from '../lib/profileUtils';
 
 interface PublicProfileProps {
@@ -13,6 +15,7 @@ export function PublicProfile({ slug }: PublicProfileProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'wallet'>('profile');
 
   useEffect(() => {
     loadProfile();
@@ -101,7 +104,16 @@ export function PublicProfile({ slug }: PublicProfileProps) {
             </a>
           </div>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden">
+          <ProfileTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            primaryColor={profile.primary_color}
+          />
+
+          {activeTab === 'wallet' ? (
+            <WalletCard profile={profile} />
+          ) : (
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden">
             {profile.cover_image_url && (
               <div className="h-48 md:h-64 overflow-hidden relative">
                 <img
@@ -339,6 +351,7 @@ export function PublicProfile({ slug }: PublicProfileProps) {
               )}
             </div>
           </div>
+          )}
 
           <div className="mt-8 text-center">
             <p className="text-white text-sm font-medium drop-shadow-lg mb-4">
