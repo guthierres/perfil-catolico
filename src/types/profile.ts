@@ -1,10 +1,16 @@
+export interface MusicEmbed {
+  type: 'spotify' | 'youtube';
+  url: string;
+  title: string;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
   slug: string | null;
   full_name: string;
   parish: string;
-  pastoral: string;
+  pastorals: string[];
   baptism_date: string | null;
   priest_name: string;
   patron_saint: string;
@@ -18,6 +24,7 @@ export interface Profile {
   background_type: 'gradient' | 'custom-gradient' | 'image' | 'solid';
   background_value: string;
   background_overlay_opacity: number;
+  music_embeds: MusicEmbed[];
   created_at: string;
   updated_at: string;
 }

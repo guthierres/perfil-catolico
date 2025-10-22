@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Cross, Church, Calendar, Sparkles, BookOpen, Home } from 'lucide-react';
+import { Cross, Church, Calendar, Sparkles, BookOpen, Home, Music } from 'lucide-react';
 import { Profile } from '../types/profile';
+import { MusicEmbed } from './MusicEmbed';
 
 interface PublicProfileProps {
   slug: string;
@@ -156,15 +157,30 @@ export function PublicProfile({ slug }: PublicProfileProps) {
                   </div>
                 )}
 
-                {profile.pastoral && (
+                {profile.pastorals && profile.pastorals.length > 0 && (
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
                     <Sparkles
                       className="w-6 h-6 mt-0.5 flex-shrink-0"
                       style={{ color: profile.secondary_color }}
                     />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-600">Pastoral</p>
-                      <p className="text-gray-800 font-medium">{profile.pastoral}</p>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-600 mb-2">
+                        {profile.pastorals.length === 1 ? 'Pastoral' : 'Pastorais'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.pastorals.map((pastoral, index) => (
+                          <span
+                            key={index}
+                            className="inline-block px-3 py-1 rounded-lg text-sm font-medium text-gray-800"
+                            style={{
+                              backgroundColor: `${profile.secondary_color}20`,
+                              borderLeft: `3px solid ${profile.secondary_color}`
+                            }}
+                          >
+                            {pastoral}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -245,7 +261,7 @@ export function PublicProfile({ slug }: PublicProfileProps) {
 
               {profile.bible_passage && (
                 <div
-                  className="rounded-2xl p-6"
+                  className="rounded-2xl p-6 mb-6"
                   style={{
                     background: `linear-gradient(135deg, ${profile.primary_color}15, ${profile.secondary_color}15)`,
                     borderLeft: `4px solid ${profile.primary_color}`
@@ -258,6 +274,26 @@ export function PublicProfile({ slug }: PublicProfileProps) {
                   <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                     {profile.bible_passage}
                   </p>
+                </div>
+              )}
+
+              {profile.music_embeds && profile.music_embeds.length > 0 && (
+                <div
+                  className="rounded-2xl p-6"
+                  style={{
+                    background: `linear-gradient(135deg, ${profile.secondary_color}15, ${profile.primary_color}15)`,
+                    borderLeft: `4px solid ${profile.secondary_color}`
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <Music className="w-5 h-5" style={{ color: profile.secondary_color }} />
+                    <h3 className="font-bold text-gray-800">Músicas</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {profile.music_embeds.map((embed, index) => (
+                      <MusicEmbed key={index} embed={embed} />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

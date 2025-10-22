@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Save, Palette, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { Save, Palette, Link as LinkIcon, Image as ImageIcon, Plus, X, Music } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { GradientCustomizer } from './GradientCustomizer';
-import { Profile } from '../types/profile';
+import { Profile, MusicEmbed } from '../types/profile';
+import { MusicEmbed as MusicEmbedComponent } from './MusicEmbed';
 
 interface ProfileEditorProps {
   onSave: () => void;
@@ -20,7 +21,7 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
     slug: '',
     full_name: '',
     parish: '',
-    pastoral: '',
+    pastorals: [],
     baptism_date: null,
     priest_name: '',
     patron_saint: '',
@@ -34,7 +35,13 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
     background_type: 'gradient',
     background_value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     background_overlay_opacity: 0.3,
+    music_embeds: [],
   });
+
+  const [newPastoral, setNewPastoral] = useState('');
+  const [newMusicUrl, setNewMusicUrl] = useState('');
+  const [newMusicTitle, setNewMusicTitle] = useState('');
+  const [musicType, setMusicType] = useState<'spotify' | 'youtube'>('spotify');
 
   useEffect(() => {
     loadProfile();
@@ -223,17 +230,65 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Pastoral
+                  Pastorais
                 </label>
-                <input
-                  type="text"
-                  value={profile.pastoral}
-                  onChange={(e) => setProfile({ ...profile, pastoral: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                  placeholder="Pastoral que serve"
-                />
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newPastoral}
+                      onChange={(e) => setNewPastoral(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newPastoral.trim()) {
+                            setProfile({ ...profile, pastorals: [...(profile.pastorals || []), newPastoral.trim()] });
+                            setNewPastoral('');
+                          }
+                        }
+                      }}
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                      placeholder="Nome da pastoral"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newPastoral.trim()) {
+                          setProfile({ ...profile, pastorals: [...(profile.pastorals || []), newPastoral.trim()] });
+                          setNewPastoral('');
+                        }
+                      }}
+                      className="px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition flex items-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Adicionar
+                    </button>
+                  </div>
+                  {profile.pastorals && profile.pastorals.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.pastorals.map((pastoral, index) => (
+                        <div
+                          key={index}
+                          className="bg-amber-100 border border-amber-300 px-3 py-2 rounded-lg flex items-center gap-2"
+                        >
+                          <span className="text-sm text-amber-900 font-medium">{pastoral}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPastorals = profile.pastorals?.filter((_, i) => i !== index);
+                              setProfile({ ...profile, pastorals: newPastorals });
+                            }}
+                            className="text-amber-700 hover:text-amber-900 transition"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -327,6 +382,97 @@ export function ProfileEditor({ onSave }: ProfileEditorProps) {
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none resize-none"
                 placeholder="Sua passagem bíblica favorita"
               />
+            </div>
+
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Music className="w-5 h-5 text-amber-700" />
+                <h3 className="text-lg font-semibold text-gray-800">Músicas</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMusicType('spotify')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          musicType === 'spotify'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Spotify
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMusicType('youtube')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          musicType === 'youtube'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        YouTube
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={newMusicTitle}
+                      onChange={(e) => setNewMusicTitle(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder="Título da música (opcional)"
+                    />
+
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={newMusicUrl}
+                        onChange={(e) => setNewMusicUrl(e.target.value)}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        placeholder={musicType === 'spotify' ? 'URL do Spotify' : 'URL do YouTube'}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newMusicUrl.trim()) {
+                            const newEmbed: MusicEmbed = {
+                              type: musicType,
+                              url: newMusicUrl.trim(),
+                              title: newMusicTitle.trim(),
+                            };
+                            setProfile({ ...profile, music_embeds: [...(profile.music_embeds || []), newEmbed] });
+                            setNewMusicUrl('');
+                            setNewMusicTitle('');
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Adicionar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {profile.music_embeds && profile.music_embeds.length > 0 && (
+                  <div className="space-y-4">
+                    {profile.music_embeds.map((embed, index) => (
+                      <MusicEmbedComponent
+                        key={index}
+                        embed={embed}
+                        editable
+                        onRemove={() => {
+                          const newEmbeds = profile.music_embeds?.filter((_, i) => i !== index);
+                          setProfile({ ...profile, music_embeds: newEmbeds });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="border-t pt-6">
