@@ -146,7 +146,7 @@ export function ProfileDisplay({ onEdit }: ProfileDisplayProps) {
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-center gap-2 text-gray-600">
                     <Cross className="w-4 h-4" />
-                    <span className="font-medium">Católico</span>
+                    <span className="font-medium">Católico Apostólico Romano</span>
                   </div>
                   {profile.civil_status && (
                     <span className="text-sm text-gray-500">
