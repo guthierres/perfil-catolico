@@ -15,8 +15,11 @@ interface Escala {
   horario: string;
   observacoes: string | null;
   comunidade_id: string;
+  updated_by: string | null;
+  updated_at: string | null;
   comunidade?: { nome: string };
   participantes?: Array<{ pessoa_id: string; pessoa?: { nome_completo: string; funcao: string } }>;
+  updated_by_profile?: { nome_completo: string } | null;
 }
 
 const ConsultarEscalasTab = () => {
@@ -76,7 +79,26 @@ const ConsultarEscalasTab = () => {
       return;
     }
 
-    setEscalas(data || []);
+    // Buscar informações dos usuários que fizeram as últimas modificações
+    const escalasComUsuarios = await Promise.all(
+      (data || []).map(async (escala: any) => {
+        if (escala.updated_by) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("nome_completo")
+            .eq("id", escala.updated_by)
+            .single();
+          
+          return {
+            ...escala,
+            updated_by_profile: profileData,
+          };
+        }
+        return escala;
+      })
+    );
+
+    setEscalas(escalasComUsuarios);
   };
 
   const canEdit = (data: string) => {
@@ -99,9 +121,14 @@ const ConsultarEscalasTab = () => {
     if (!editingEscala) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error: escalaError } = await supabase
         .from("escalas")
-        .update({ observacoes })
+        .update({ 
+          observacoes,
+          updated_by: user?.id 
+        })
         .eq("id", editingEscala.id);
 
       if (escalaError) throw escalaError;
@@ -246,6 +273,12 @@ const ConsultarEscalasTab = () => {
                       <div className="text-sm">
                         <span className="font-medium">Observações:</span>{" "}
                         <span className="text-muted-foreground">{escala.observacoes}</span>
+                      </div>
+                    )}
+                    {escala.updated_by_profile && (
+                      <div className="text-xs text-muted-foreground mt-2 italic">
+                        Última modificação por: {escala.updated_by_profile.nome_completo}
+                        {escala.updated_at && ` em ${format(parseISO(escala.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`}
                       </div>
                     )}
                   </div>
