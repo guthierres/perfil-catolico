@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Church, Home, Sparkles } from "lucide-react";
+import { Calendar, Church, Home, Sparkles, FileImage, FileText, Maximize2 } from "lucide-react";
 import logoParoquia from "@/assets/logo-paroquia.webp";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface EscalaPublica {
   id: string;
@@ -25,6 +28,9 @@ const EscalasPublicas = () => {
   const [comunidades, setComunidades] = useState<string[]>([]);
   const [selectedComunidade, setSelectedComunidade] = useState<string>("todas");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [selectedEscala, setSelectedEscala] = useState<EscalaPublica | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const escalaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkAuth();
@@ -60,6 +66,55 @@ const EscalasPublicas = () => {
   const filteredEscalas = selectedComunidade === "todas"
     ? escalas
     : escalas.filter(e => e.comunidade_nome === selectedComunidade);
+
+  const handleDownloadPNG = async () => {
+    if (!escalaRef.current) return;
+    
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(escalaRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      
+      const link = document.createElement("a");
+      link.download = `escala-${selectedEscala?.data}-${selectedEscala?.horario}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error("Erro ao gerar PNG:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!escalaRef.current) return;
+    
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(escalaRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+      
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`escala-${selectedEscala?.data}-${selectedEscala?.horario}.pdf`);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-elegant">
@@ -166,11 +221,15 @@ const EscalasPublicas = () => {
             {filteredEscalas.map((escala, index) => (
               <Card 
                 key={escala.id} 
-                className="border-primary/10 hover:border-primary/30 transition-all duration-300 hover:shadow-red hover:-translate-y-1 bg-white/90 backdrop-blur-sm animate-fade-in-up"
+                className="border-primary/10 hover:border-primary/30 transition-all duration-300 hover:shadow-red hover:-translate-y-1 bg-white/90 backdrop-blur-sm animate-fade-in-up cursor-pointer group"
                 style={{ animationDelay: `${0.1 * (index % 6)}s`, animationFillMode: "both" }}
+                onClick={() => setSelectedEscala(escala)}
               >
-                <CardHeader className="bg-gradient-primary text-primary-foreground rounded-t-lg pb-3 sm:pb-4 p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg md:text-xl flex items-start sm:items-center gap-2 flex-wrap">
+                <CardHeader className="bg-gradient-primary text-primary-foreground rounded-t-lg pb-3 sm:pb-4 p-4 sm:p-6 relative">
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Maximize2 className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="text-base sm:text-lg md:text-xl flex items-start sm:items-center gap-2 flex-wrap pr-8">
                     <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5 sm:mt-0" />
                     <span className="break-words leading-tight">
                       {format(parseISO(escala.data), "EEEE, dd 'de' MMMM", { locale: ptBR })}
@@ -187,15 +246,17 @@ const EscalasPublicas = () => {
                         <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
                         Participantes
                       </h4>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      <div className="space-y-2">
                         {escala.participantes.map((p, idx) => (
-                          <span
+                          <div
                             key={idx}
-                            className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-primary text-primary-foreground font-medium text-xs shadow-sm break-words max-w-full"
+                            className="flex items-center justify-between p-3 rounded-lg bg-gradient-primary/10 border border-primary/20"
                           >
-                            <span className="truncate">{p.nome_completo}</span>
-                            <span className="ml-1 text-[10px] sm:text-xs opacity-90 flex-shrink-0">({p.funcao})</span>
-                          </span>
+                            <span className="font-semibold text-base sm:text-lg text-foreground">{p.nome_completo}</span>
+                            <span className="text-xs sm:text-sm px-3 py-1 rounded-full bg-primary/20 text-primary font-medium">
+                              {p.funcao}
+                            </span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -213,6 +274,103 @@ const EscalasPublicas = () => {
           </div>
         )}
       </main>
+
+      {/* Modal de Visualização e Download */}
+      <Dialog open={!!selectedEscala} onOpenChange={(open) => !open && setSelectedEscala(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+          <div className="sticky top-0 z-10 bg-background border-b p-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Visualização da Escala</h3>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleDownloadPNG}
+                disabled={isDownloading}
+                variant="outline"
+                size="sm"
+              >
+                <FileImage className="h-4 w-4 mr-2" />
+                {isDownloading ? "Gerando..." : "PNG"}
+              </Button>
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                variant="outline"
+                size="sm"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {isDownloading ? "Gerando..." : "PDF"}
+              </Button>
+            </div>
+          </div>
+          
+          {selectedEscala && (
+            <div ref={escalaRef} className="p-8 bg-white">
+              {/* Header do PDF/PNG */}
+              <div className="text-center mb-8">
+                <img 
+                  src={logoParoquia} 
+                  alt="Logo Paróquia" 
+                  className="h-20 w-auto mx-auto mb-4"
+                />
+                <h1 className="text-2xl font-bold text-foreground mb-2">
+                  Paróquia Senhor Santo Cristo dos Milagres
+                </h1>
+                <p className="text-lg text-muted-foreground">Escala Litúrgica</p>
+              </div>
+
+              {/* Informações da Escala */}
+              <div className="bg-gradient-primary text-primary-foreground rounded-lg p-6 mb-6">
+                <div className="flex items-center justify-center gap-4 mb-3">
+                  <Calendar className="h-6 w-6" />
+                  <h2 className="text-2xl font-bold">
+                    {format(parseISO(selectedEscala.data), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </h2>
+                </div>
+                <div className="text-center text-xl font-semibold">
+                  {selectedEscala.horario} • {selectedEscala.comunidade_nome}
+                </div>
+              </div>
+
+              {/* Participantes */}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Participantes Escalados
+                </h3>
+                <div className="space-y-3">
+                  {selectedEscala.participantes.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-4 rounded-lg bg-gradient-primary/10 border-2 border-primary/20"
+                    >
+                      <span className="font-bold text-xl text-foreground">{p.nome_completo}</span>
+                      <span className="text-base px-4 py-2 rounded-full bg-primary text-primary-foreground font-semibold">
+                        {p.funcao}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Observações */}
+              {selectedEscala.observacoes && (
+                <div className="border-t-2 border-primary/20 pt-4">
+                  <h3 className="text-lg font-bold text-primary mb-2">Observações:</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed bg-muted/50 p-4 rounded-lg">
+                    {selectedEscala.observacoes}
+                  </p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="text-center mt-8 pt-6 border-t border-primary/10">
+                <p className="text-sm text-muted-foreground">
+                  Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="border-t border-primary/10 mt-12 sm:mt-16 py-6 sm:py-8 bg-white/60 backdrop-blur-sm">
