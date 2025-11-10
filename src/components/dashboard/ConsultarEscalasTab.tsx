@@ -400,14 +400,14 @@ const ConsultarEscalasTab = () => {
                               Função Litúrgica
                             </Label>
                             <Select
-                              value={funcaoAtual || ""}
-                              onValueChange={(value) => updateFuncaoLiturgica(pessoa.id, value || null)}
+                              value={funcaoAtual || "none"}
+                              onValueChange={(value) => updateFuncaoLiturgica(pessoa.id, value === "none" ? null : value)}
                             >
                               <SelectTrigger id={`funcao-${pessoa.id}`} className="h-8 text-sm">
                                 <SelectValue placeholder="Selecione uma função" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Nenhuma função específica</SelectItem>
+                                <SelectItem value="none">Nenhuma função específica</SelectItem>
                                 {funcoesLiturgicas.map((funcao) => (
                                   <SelectItem key={funcao.id} value={funcao.id}>
                                     {funcao.nome}
