@@ -36,18 +36,21 @@ export type Database = {
         Row: {
           created_at: string | null
           escala_id: string
+          funcao_liturgica_id: string | null
           id: string
           pessoa_id: string
         }
         Insert: {
           created_at?: string | null
           escala_id: string
+          funcao_liturgica_id?: string | null
           id?: string
           pessoa_id: string
         }
         Update: {
           created_at?: string | null
           escala_id?: string
+          funcao_liturgica_id?: string | null
           id?: string
           pessoa_id?: string
         }
@@ -64,6 +67,13 @@ export type Database = {
             columns: ["escala_id"]
             isOneToOne: false
             referencedRelation: "escalas_publicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_participantes_funcao_liturgica_id_fkey"
+            columns: ["funcao_liturgica_id"]
+            isOneToOne: false
+            referencedRelation: "funcoes_liturgicas"
             referencedColumns: ["id"]
           },
           {
@@ -132,6 +142,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      funcoes_liturgicas: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       horarios: {
         Row: {
