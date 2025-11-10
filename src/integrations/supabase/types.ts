@@ -91,6 +91,8 @@ export type Database = {
           horario: string
           id: string
           observacoes: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           comunidade_id: string
@@ -100,6 +102,8 @@ export type Database = {
           horario: string
           id?: string
           observacoes?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           comunidade_id?: string
@@ -109,6 +113,8 @@ export type Database = {
           horario?: string
           id?: string
           observacoes?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
