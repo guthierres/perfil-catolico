@@ -259,8 +259,11 @@ const EscalasPublicas = () => {
                               </span>
                             </div>
                             {p.funcao_liturgica && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs sm:text-sm font-semibold text-primary">
+                              <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/20 border border-primary/40">
+                                <span className="text-xs sm:text-sm font-bold text-primary">
+                                  Função:
+                                </span>
+                                <span className="text-xs sm:text-sm font-semibold text-foreground">
                                   {p.funcao_liturgica}
                                 </span>
                               </div>
@@ -358,10 +361,15 @@ const EscalasPublicas = () => {
                         </span>
                       </div>
                       {p.funcao_liturgica && (
-                        <div className="border-t border-primary/20 pt-2">
-                          <span className="text-lg font-bold text-primary">
-                            {p.funcao_liturgica}
-                          </span>
+                        <div className="border-t border-primary/20 pt-3 mt-2">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/20 border-2 border-primary/40">
+                            <span className="text-base sm:text-lg font-bold text-primary">
+                              Função:
+                            </span>
+                            <span className="text-base sm:text-lg font-bold text-foreground">
+                              {p.funcao_liturgica}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
