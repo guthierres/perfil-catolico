@@ -54,6 +54,7 @@ const EscalasTab = () => {
           comunidade_id: selectedComunidade,
           observacoes: observacoes || null,
           created_by: user?.id,
+          updated_by: user?.id,
         })
         .select()
         .single();
