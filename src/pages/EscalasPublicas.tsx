@@ -187,6 +187,7 @@ const EscalasPublicas = () => {
                       <SelectItem key={com} value={com}>{com}</SelectItem>
                     ))}
                   </SelectContent>
+                </Select> {/* TAG FALTANTE CORRIGIDA AQUI */}
               </div>
 
               <div className="space-y-2">
@@ -298,7 +299,7 @@ const EscalasPublicas = () => {
                 <FileText className="h-4 w-4 mr-2" />
                 {isDownloading ? "Gerando..." : "PDF"}
               </Button>
-              {/* Botão de Fechar Adicionado */}
+              {/* Botão de Fechar */}
               <Button
                 onClick={() => setSelectedEscala(null)}
                 variant="ghost"
