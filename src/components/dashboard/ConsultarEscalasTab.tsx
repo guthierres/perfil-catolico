@@ -3,11 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format, parseISO, isBefore, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Pencil, Trash2, Eye, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface Participante {
+  pessoa_id: string;
+  funcao_liturgica_id: string | null;
+  pessoa?: { nome_completo: string; funcao: string };
+  funcao_liturgica?: { nome: string } | null;
+}
 
 interface Escala {
   id: string;
@@ -18,18 +29,24 @@ interface Escala {
   updated_by: string | null;
   updated_at: string | null;
   comunidade?: { nome: string };
-  participantes?: Array<{ pessoa_id: string; pessoa?: { nome_completo: string; funcao: string } }>;
+  participantes?: Participante[];
   updated_by_profile?: { nome_completo: string } | null;
+}
+
+interface ParticipanteComFuncao {
+  pessoaId: string;
+  funcaoLiturgicaId: string | null;
 }
 
 const ConsultarEscalasTab = () => {
   const [escalas, setEscalas] = useState<Escala[]>([]);
   const [comunidades, setComunidades] = useState<any[]>([]);
   const [pessoas, setPessoas] = useState<any[]>([]);
+  const [funcoesLiturgicas, setFuncoesLiturgicas] = useState<any[]>([]);
   const [selectedComunidade, setSelectedComunidade] = useState<string>("todas");
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
   const [editingEscala, setEditingEscala] = useState<Escala | null>(null);
-  const [selectedPessoas, setSelectedPessoas] = useState<string[]>([]);
+  const [participantes, setParticipantes] = useState<ParticipanteComFuncao[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -39,19 +56,15 @@ const ConsultarEscalasTab = () => {
   }, [selectedComunidade, selectedMonth]);
 
   const fetchData = async () => {
-    const { data: comunidadesData } = await supabase
-      .from("comunidades")
-      .select("*")
-      .order("nome");
+    const [comunidadesData, pessoasData, funcoesData] = await Promise.all([
+      supabase.from("comunidades").select("*").order("nome"),
+      supabase.from("pessoas").select("*").eq("ativo", true).order("nome_completo"),
+      supabase.from("funcoes_liturgicas").select("*").order("nome")
+    ]);
 
-    const { data: pessoasData } = await supabase
-      .from("pessoas")
-      .select("*")
-      .eq("ativo", true)
-      .order("nome_completo");
-
-    setComunidades(comunidadesData || []);
-    setPessoas(pessoasData || []);
+    setComunidades(comunidadesData.data || []);
+    setPessoas(pessoasData.data || []);
+    setFuncoesLiturgicas(funcoesData.data || []);
 
     let query = supabase
       .from("escalas")
@@ -60,7 +73,9 @@ const ConsultarEscalasTab = () => {
         comunidade:comunidades(nome),
         participantes:escala_participantes(
           pessoa_id,
-          pessoa:pessoas(nome_completo, funcao)
+          funcao_liturgica_id,
+          pessoa:pessoas(nome_completo, funcao),
+          funcao_liturgica:funcoes_liturgicas(nome)
         )
       `)
       .gte("data", `${selectedMonth}-01`)
@@ -79,7 +94,6 @@ const ConsultarEscalasTab = () => {
       return;
     }
 
-    // Buscar informações dos usuários que fizeram as últimas modificações
     const escalasComUsuarios = await Promise.all(
       (data || []).map(async (escala: any) => {
         if (escala.updated_by) {
@@ -113,7 +127,12 @@ const ConsultarEscalasTab = () => {
       return;
     }
     setEditingEscala(escala);
-    setSelectedPessoas(escala.participantes?.map(p => p.pessoa_id) || []);
+    setParticipantes(
+      escala.participantes?.map(p => ({
+        pessoaId: p.pessoa_id,
+        funcaoLiturgicaId: p.funcao_liturgica_id
+      })) || []
+    );
     setObservacoes(escala.observacoes || "");
   };
 
@@ -138,14 +157,15 @@ const ConsultarEscalasTab = () => {
         .delete()
         .eq("escala_id", editingEscala.id);
 
-      const participantes = selectedPessoas.map((pessoaId) => ({
+      const participantesData = participantes.map((p) => ({
         escala_id: editingEscala.id,
-        pessoa_id: pessoaId,
+        pessoa_id: p.pessoaId,
+        funcao_liturgica_id: p.funcaoLiturgicaId
       }));
 
       const { error: participantesError } = await supabase
         .from("escala_participantes")
-        .insert(participantes);
+        .insert(participantesData);
 
       if (participantesError) throw participantesError;
 
@@ -184,6 +204,31 @@ const ConsultarEscalasTab = () => {
     setShowShareDialog(true);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado para a área de transferência!");
+  };
+
+  const toggleParticipante = (pessoaId: string) => {
+    setParticipantes(prev => {
+      const exists = prev.find(p => p.pessoaId === pessoaId);
+      if (exists) {
+        return prev.filter(p => p.pessoaId !== pessoaId);
+      } else {
+        return [...prev, { pessoaId, funcaoLiturgicaId: null }];
+      }
+    });
+  };
+
+  const updateFuncaoLiturgica = (pessoaId: string, funcaoId: string | null) => {
+    setParticipantes(prev => 
+      prev.map(p => p.pessoaId === pessoaId ? { ...p, funcaoLiturgicaId: funcaoId } : p)
+    );
+  };
+
+  const isPessoaSelecionada = (pessoaId: string) => {
+    return participantes.some(p => p.pessoaId === pessoaId);
+  };
+
+  const getFuncaoLiturgica = (pessoaId: string) => {
+    return participantes.find(p => p.pessoaId === pessoaId)?.funcaoLiturgicaId || null;
   };
 
   return (
@@ -260,12 +305,18 @@ const ConsultarEscalasTab = () => {
                       <span className="font-medium">Participantes:</span>{" "}
                       <div className="mt-1 flex flex-wrap gap-2">
                         {escala.participantes?.map((p, idx) => (
-                          <span
+                          <div
                             key={idx}
-                            className="inline-flex items-center px-2 py-1 rounded-md bg-secondary text-secondary-foreground text-xs"
+                            className="inline-flex flex-col px-3 py-2 rounded-md bg-secondary text-secondary-foreground border border-secondary-foreground/20"
                           >
-                            {p.pessoa?.nome_completo} ({p.pessoa?.funcao})
-                          </span>
+                            <span className="font-semibold text-sm">{p.pessoa?.nome_completo}</span>
+                            <span className="text-xs text-muted-foreground">{p.pessoa?.funcao}</span>
+                            {p.funcao_liturgica && (
+                              <span className="text-xs font-medium text-primary mt-1">
+                                {p.funcao_liturgica.nome}
+                              </span>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -310,7 +361,7 @@ const ConsultarEscalasTab = () => {
       </div>
 
       <Dialog open={!!editingEscala} onOpenChange={(open) => !open && setEditingEscala(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Escala</DialogTitle>
             <DialogDescription>
@@ -320,29 +371,59 @@ const ConsultarEscalasTab = () => {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Participantes</label>
-              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
-                {pessoas.map((pessoa) => (
-                  <div key={pessoa.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`edit-${pessoa.id}`}
-                      checked={selectedPessoas.includes(pessoa.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedPessoas([...selectedPessoas, pessoa.id]);
-                        } else {
-                          setSelectedPessoas(selectedPessoas.filter((id) => id !== pessoa.id));
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <label htmlFor={`edit-${pessoa.id}`} className="text-sm cursor-pointer flex-1">
-                      {pessoa.nome_completo} - {pessoa.funcao}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              <label className="text-sm font-medium">Participantes ({participantes.length})</label>
+              <ScrollArea className="h-96 border rounded-md p-3">
+                <div className="space-y-3">
+                  {pessoas.map((pessoa) => {
+                    const selecionada = isPessoaSelecionada(pessoa.id);
+                    const funcaoAtual = getFuncaoLiturgica(pessoa.id);
+                    
+                    return (
+                      <div key={pessoa.id} className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`edit-${pessoa.id}`}
+                            checked={selecionada}
+                            onCheckedChange={() => toggleParticipante(pessoa.id)}
+                          />
+                          <Label
+                            htmlFor={`edit-${pessoa.id}`}
+                            className="text-sm font-medium leading-none cursor-pointer flex-1"
+                          >
+                            {pessoa.nome_completo} <span className="text-muted-foreground text-xs">({pessoa.funcao})</span>
+                          </Label>
+                        </div>
+                        
+                        {selecionada && (
+                          <div className="ml-6 pl-4 border-l-2 border-primary/30 space-y-1">
+                            <Label htmlFor={`funcao-${pessoa.id}`} className="text-xs text-muted-foreground">
+                              Função Litúrgica
+                            </Label>
+                            <Select
+                              value={funcaoAtual || ""}
+                              onValueChange={(value) => updateFuncaoLiturgica(pessoa.id, value || null)}
+                            >
+                              <SelectTrigger id={`funcao-${pessoa.id}`} className="h-8 text-sm">
+                                <SelectValue placeholder="Selecione uma função" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Nenhuma função específica</SelectItem>
+                                {funcoesLiturgicas.map((funcao) => (
+                                  <SelectItem key={funcao.id} value={funcao.id}>
+                                    {funcao.nome}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        
+                        <Separator />
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
 
             <div className="space-y-2">
