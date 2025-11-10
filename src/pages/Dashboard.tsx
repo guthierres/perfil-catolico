@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Users, BarChart3, LogOut, ClipboardList, Sparkles } from "lucide-react";
+import { Calendar, Users, BarChart3, LogOut, ClipboardList, Sparkles, Scroll } from "lucide-react";
 import { toast } from "sonner";
 import logoParoquia from "@/assets/logo-paroquia.webp";
 import PessoasTab from "@/components/dashboard/PessoasTab";
 import EscalasTab from "@/components/dashboard/EscalasTab";
 import ConsultarEscalasTab from "@/components/dashboard/ConsultarEscalasTab";
 import RelatoriosTab from "@/components/dashboard/RelatoriosTab";
+import { FuncoesLiturgicasTab } from "@/components/dashboard/FuncoesLiturgicasTab";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-6 sm:py-8 animate-fade-in-up" style={{ animationDelay: "0.2s", animationFillMode: "both" }}>
         {profile?.is_admin ? (
           <Tabs defaultValue="pessoas" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 h-auto sm:h-10 p-1 bg-white/80 backdrop-blur-sm border border-primary/10">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1 sm:gap-0 h-auto sm:h-10 p-1 bg-white/80 backdrop-blur-sm border border-primary/10">
               <TabsTrigger value="pessoas" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 py-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
                 <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Pessoas</span>
@@ -111,6 +112,11 @@ const Dashboard = () => {
                 <span className="hidden sm:inline">Relatórios</span>
                 <span className="sm:hidden">Relatórios</span>
               </TabsTrigger>
+              <TabsTrigger value="funcoes" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 py-2 data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground">
+                <Scroll className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Funções</span>
+                <span className="sm:hidden">Funções</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="pessoas">
@@ -127,6 +133,10 @@ const Dashboard = () => {
 
             <TabsContent value="relatorios">
               <RelatoriosTab />
+            </TabsContent>
+
+            <TabsContent value="funcoes">
+              <FuncoesLiturgicasTab />
             </TabsContent>
           </Tabs>
         ) : (
